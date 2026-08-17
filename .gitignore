@@ -1,0 +1,12 @@
+.Rhistory
+.RData
+.Rproj.user
+*_files/
+*.knit.md
+*.tex
+_purl_full.R
+data/
+*.log
+.DS_Store
+Thumbs.db
+analytic_dataset_*.csv

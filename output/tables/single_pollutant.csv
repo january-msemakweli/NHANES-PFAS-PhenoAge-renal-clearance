@@ -1,0 +1,5 @@
+"exposure","beta","conf.low","conf.high","p.value","N","source"
+"LBXPFOS_log2","-1.187","-1.491","-0.884","<0.001",7633,"MI-pooled"
+"LBXPFOA_log2","-1.455","-1.758","-1.153","<0.001",7633,"MI-pooled"
+"LBXPFNA_log2","-0.858","-1.179","-0.537","<0.001",7633,"MI-pooled"
+"LBXPFHS_log2","-0.845","-1.030","-0.661","<0.001",7633,"MI-pooled"
