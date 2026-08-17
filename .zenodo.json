@@ -1,0 +1,34 @@
+{
+  "title": "Renal Clearance and Albumin Binding May Distort Cross-Sectional Associations Between PFAS and Phenotypic Age Acceleration: analysis code",
+  "description": "Analysis code and aggregate outputs for an NHANES 2005-2018 study of a four-chemical PFAS mixture (PFOS, PFOA, PFNA, PFHxS) and PhenoAge acceleration. The manuscript argument is that albumin binding and renal clearance create toxicokinetic overlap with the Levine PhenoAge algorithm, so cross-sectional PFAS-PhenoAge associations can be distorted, with CKD as an effect modifier. Public NHANES files are downloaded at runtime and are not redistributed.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "mit",
+  "creators": [
+    {
+      "name": "Msemakweli, January G.",
+      "affiliation": "Johns Hopkins Bloomberg School of Public Health"
+    },
+    {
+      "name": "Dickerson, Aisha S.",
+      "affiliation": "Johns Hopkins Bloomberg School of Public Health"
+    }
+  ],
+  "keywords": [
+    "PFAS",
+    "PhenoAge",
+    "biological aging",
+    "NHANES",
+    "chronic kidney disease",
+    "chemical mixtures",
+    "qgcomp"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://wwwn.cdc.gov/nchs/nhanes/",
+      "relation": "requires",
+      "resource_type": "dataset",
+      "scheme": "url"
+    }
+  ]
+}

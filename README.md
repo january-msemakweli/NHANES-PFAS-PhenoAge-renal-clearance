@@ -1,6 +1,14 @@
 # Renal Clearance and Albumin Binding May Distort Cross-Sectional Associations Between PFAS and Phenotypic Age Acceleration
 
-Reproducible analysis of a four-chemical PFAS mixture (PFOS, PFOA, PFNA, PFHxS) and PhenoAge acceleration in NHANES 2005-2018, with CKD as an effect modifier.
+Long-chain PFAS (PFOS, PFOA, PFNA, PFHxS) circulate bound to albumin and leave the body mainly through the kidney. Levine PhenoAge is a Gompertz transform of chronological age plus nine clinical chemistries. Two of those chemistries are serum albumin and creatinine. In a cross-sectional survey, the same physiology that sets the serum PFAS concentration also enters the aging score. An inverse PFAS-PhenoAge association can therefore be a toxicokinetic echo of the outcome formula rather than a biological-aging effect.
+
+That overlap is why these checks are necessary. If the association is left as a single mixture coefficient, it is easy to read a negative number as slower aging. The only way to tell those stories apart is to rebuild the shared pieces (serum PFAS, albumin, creatinine, eGFR, ACR, and PhenoAge) and ask where the signal lives:
+
+1. Does a four-chemical PFAS mixture still associate with PhenoAge acceleration after survey design and covariates, including chronological age (PFAS is age-structured; residualizing only the outcome does not age-adjust the exposure)?
+2. Is that association stronger in CKD, where renal clearance is impaired and creatinine is already inside PhenoAge?
+3. Which PhenoAge components carry the mixture coefficient, especially albumin and creatinine, the two biomarkers that sit on the PFAS toxicokinetic path?
+
+A negative mixture coefficient is not interpreted as protection. The CKD interaction and the component models test whether the signal concentrates where the algorithm and PFAS kinetics overlap.
 
 The public entry point is `run_all.R`.
 
@@ -36,7 +44,7 @@ R/write_outputs.R         # CSV tables + numeric check against the paper
 run_all.R
 ```
 
-## Analysis choices that match the manuscript
+## Analysis choices
 
 - Adults aged 20 and older; cycles with CRP: 2005-2010 and 2015-2018
 - PhenoAge from Levine et al. (2018); acceleration is the survey-weighted residual of PhenoAge on chronological age
@@ -59,6 +67,10 @@ run_all.R
 ## Data
 
 NHANES is public and is downloaded at runtime with [nhanesA](https://cran.r-project.org/package=nhanesA). Do not commit `data/` extracts.
+
+## License
+
+MIT. See `LICENSE`.
 
 ## Ethics
 
