@@ -231,6 +231,22 @@ resolve_weight_var <- function(df, weight_type = "auto", exposure_family = "pfas
   stop("No supported NHANES weight variable found.")
 }
 
+below_lod_indicator <- function(x) {
+  lc_num <- suppressWarnings(as.numeric(as.character(x)))
+  lc_chr <- toupper(trimws(as.character(x)))
+  below <- (!is.na(lc_num) & lc_num == 1) | str_detect(lc_chr, "BELOW|<")
+  below[is.na(below)] <- FALSE
+  below
+}
+
+any_below_lod <- function(df, vars) {
+  vars <- vars[vars %in% names(df)]
+  below <- rep(FALSE, nrow(df))
+  if (length(vars) == 0) return(below)
+  for (v in vars) below <- below | below_lod_indicator(df[[v]])
+  below
+}
+
 apply_lod_rule <- function(df, varname) {
   x <- suppressWarnings(as.numeric(as.character(df[[varname]])))
 
@@ -247,11 +263,7 @@ apply_lod_rule <- function(df, varname) {
   lc_candidates <- lc_candidates[lc_candidates %in% names(df)]
 
   if (length(lc_candidates) > 0) {
-    lc <- df[[lc_candidates[1]]]
-    lc_num <- suppressWarnings(as.numeric(as.character(lc)))
-    lc_chr <- toupper(trimws(as.character(lc)))
-    below <- (!is.na(lc_num) & lc_num == 1) | str_detect(lc_chr, "BELOW|<")
-    below[is.na(below)] <- FALSE
+    below <- below_lod_indicator(df[[lc_candidates[1]]])
     # NHANES convention: when LC==1, the concentration column typically holds the LOD value.
     # Standard replacement: value / sqrt(2).
     x[below] <- x[below] / sqrt(2)

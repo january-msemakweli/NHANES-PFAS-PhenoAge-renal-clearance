@@ -252,27 +252,21 @@ crp_by_cycle <- dat %>%
   )
 kable(crp_by_cycle, caption = "CRP diagnostic by cycle -- verify units (PhenoAge expects mg/dL). If source table is HSCRP, values may be mg/L.")
 
-# Step 2: provenance-based detection (strongest signal).
-crp_tables_used <- if ("crp_table" %in% names(dat)) unique(na.omit(dat$crp_table)) else character(0)
-provenance_suggests_mgl <- length(crp_tables_used) > 0 && any(str_detect(crp_tables_used, regex("HSCRP", ignore_case = TRUE)))
-# Step 3: distribution-based backup -- require median > 1.5 AND p75 > 3 to trigger conversion.
-crp_overall_med <- median(dat$crp, na.rm = TRUE)
-crp_overall_p75 <- quantile(dat$crp, 0.75, na.rm = TRUE)
-distribution_suggests_mgl <- !is.na(crp_overall_med) && crp_overall_med > 1.5 &&
-                             !is.na(crp_overall_p75) && crp_overall_p75 > 3
-
-if (provenance_suggests_mgl || distribution_suggests_mgl) {
-  reason <- if (provenance_suggests_mgl) {
-    paste0("CRP source table(s) [", paste(crp_tables_used, collapse = ", "), "] suggest mg/L.")
-  } else {
-    paste0("Distribution heuristic: median=", round(crp_overall_med, 3), ", p75=", round(crp_overall_p75, 3), ".")
-  }
-  message(">>> Converting CRP from mg/L to mg/dL (/ 10). Reason: ", reason)
-  dat$crp <- dat$crp / 10
+# LBXCRP in the CRP tables is already mg/dL. LBXHSCRP is mg/L.
+# Divide only the HSCRP rows. A single HSCRP file must not rescale the earlier cycles.
+hs_crp <- if ("crp_table" %in% names(dat)) {
+  str_detect(dplyr::coalesce(as.character(dat$crp_table), ""), regex("HSCRP", ignore_case = TRUE))
 } else {
-  message(">>> CRP assumed to be in mg/dL (median=", round(crp_overall_med, 4),
-          ", p75=", round(crp_overall_p75, 4), "). Verify against NHANES documentation.")
+  rep(FALSE, nrow(dat))
 }
+hs_crp[is.na(hs_crp)] <- FALSE
+message(
+  ">>> CRP: dividing HSCRP rows by 10 (mg/L to mg/dL). N=",
+  sum(hs_crp & !is.na(dat$crp)),
+  ". CRP tables left in mg/dL. N=",
+  sum(!hs_crp & !is.na(dat$crp))
+)
+dat$crp[hs_crp] <- dat$crp[hs_crp] / 10
 
 # --- Glucose provenance diagnostic ---
 # Coerce glu to numeric (nhanes_raw has character columns from bind_rows); needed for summarise and later unit conversion.
@@ -429,6 +423,9 @@ lc_map <- list(
   pfoa_br  = c("SDBPFOAL", "LBDBFOAL")
 )
 
+dat$pfos_isomer_below <- FALSE
+dat$pfoa_isomer_below <- FALSE
+
 for (chem in c("pfos", "pfoa")) {
   # Get available variables for the cycle
   lin_vars <- isomer_map[[paste0(chem, "_lin")]]
@@ -438,12 +435,14 @@ for (chem in c("pfos", "pfoa")) {
   
   lin_val <- coalesce_num(dat, lin_vars)
   br_val  <- coalesce_num(dat, br_vars)
-  lin_lc_val <- coalesce_num(dat, lin_lc)
-  br_lc_val  <- coalesce_num(dat, br_lc)
-  
-  # Apply LOD rule: if indicator == 1, divide by sqrt(2)
-  lin_val <- ifelse(!is.na(lin_lc_val) & lin_lc_val == 1, lin_val / sqrt(2), lin_val)
-  br_val  <- ifelse(!is.na(br_lc_val) & br_lc_val == 1, br_val / sqrt(2), br_val)
+  # 2015-2018 comment codes are text ("Below lower detection limit"), not 0/1.
+  lin_below <- any_below_lod(dat, lin_lc)
+  br_below  <- any_below_lod(dat, br_lc)
+  message(">>> LOD ", chem, ": linear below=", sum(lin_below), " branched below=", sum(br_below))
+  dat[[paste0(chem, "_isomer_below")]] <- lin_below | br_below
+
+  lin_val <- ifelse(lin_below, lin_val / sqrt(2), lin_val)
+  br_val  <- ifelse(br_below, br_val / sqrt(2), br_val)
   
   # Sum them to recreate the total concentration
   summed_val <- lin_val + br_val
@@ -506,19 +505,20 @@ lod_diag <- lapply(chosen_exposures, function(v) {
   lc_var <- lc_candidates[lc_candidates %in% names(dat)]
   has_lc <- length(lc_var) > 0
   if (has_lc) {
-    lc_vals <- suppressWarnings(as.numeric(as.character(dat[[lc_var[1]]])))
-    below <- !is.na(lc_vals) & lc_vals == 1
+    below <- below_lod_indicator(dat[[lc_var[1]]])
   } else {
-    below <- rep(FALSE, length(x_raw))
+    below <- rep(FALSE, nrow(dat))
   }
+  if (v == "LBXPFOS" && "pfos_isomer_below" %in% names(dat)) below <- below | dat$pfos_isomer_below
+  if (v == "LBXPFOA" && "pfoa_isomer_below" %in% names(dat)) below <- below | dat$pfoa_isomer_below
 
   by_cycle <- dat %>%
     mutate(.x = x_raw, .below = below) %>%
     group_by(cycle) %>%
     summarise(
       n = sum(!is.na(.x)),
-      n_below = sum(.below, na.rm = TRUE),
-      pct_below = if (sum(!is.na(.x)) > 0) round(sum(.below, na.rm = TRUE) / sum(!is.na(.x)) * 100, 1) else NA_real_,
+      n_below = sum(.below & !is.na(.x), na.rm = TRUE),
+      pct_below = if (sum(!is.na(.x)) > 0) round(sum(.below & !is.na(.x), na.rm = TRUE) / sum(!is.na(.x)) * 100, 1) else NA_real_,
       median_below = if (sum(.below & !is.na(.x)) > 0) median(.x[.below], na.rm = TRUE) else NA_real_,
       median_above = if (sum(!.below & !is.na(.x)) > 0) median(.x[!.below & !is.na(.x)], na.rm = TRUE) else NA_real_,
       min_positive = if (any(.x > 0, na.rm = TRUE)) min(.x[.x > 0], na.rm = TRUE) else NA_real_,
@@ -529,6 +529,8 @@ lod_diag <- lapply(chosen_exposures, function(v) {
   by_cycle
 }) %>% bind_rows()
 kable(lod_diag, caption = "LOD diagnostic per exposure by cycle. Verify: median_below ~ LOD value; if it diverges from min_positive, review the LC->x/sqrt(2) assumption.")
+dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
+write.csv(lod_diag, "output/tables/lod_diagnostic.csv", row.names = FALSE)
 
 
 ## ----analytic-sample----------------------------------------------------------
@@ -1016,6 +1018,27 @@ qdat_svy$race_eth <- droplevels(factor(qdat_svy$race_eth))
 qdat_svy$cycle    <- droplevels(factor(qdat_svy$cycle))
 if ("smoker3"  %in% names(qdat_svy)) qdat_svy$smoker3  <- droplevels(qdat_svy$smoker3)
 if ("alcohol3" %in% names(qdat_svy)) qdat_svy$alcohol3 <- droplevels(qdat_svy$alcohol3)
+
+lod_one <- function(label, flag) {
+  flag[is.na(flag)] <- FALSE
+  data.frame(
+    analyte = label,
+    n = length(flag),
+    n_below = sum(flag),
+    pct_below = round(100 * mean(flag), 2),
+    stringsAsFactors = FALSE
+  )
+}
+lod_sample <- rbind(
+  lod_one("PFOS", qdat_svy$pfos_isomer_below | any_below_lod(qdat_svy, c("LBXPFOSLC", "LBDPFOSLC", "LBXPFOSL", "LBDPFOSL"))),
+  lod_one("PFOA", qdat_svy$pfoa_isomer_below | any_below_lod(qdat_svy, c("LBXPFOALC", "LBDPFOALC", "LBXPFOAL", "LBDPFOAL"))),
+  lod_one("PFNA", any_below_lod(qdat_svy, c("LBXPFNALC", "LBDPFNALC", "LBXPFNAL", "LBDPFNAL"))),
+  lod_one("PFHxS", any_below_lod(qdat_svy, c("LBXPFHSLC", "LBDPFHSLC", "LBXPFHSL", "LBDPFHSL")))
+)
+dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
+write.csv(lod_sample, "output/tables/lod_estimation_sample.csv", row.names = FALSE)
+message(">>> LOD in estimation sample N=", nrow(qdat_svy))
+print(lod_sample)
 
 # ---- Pre-compute sensitivity-derived columns on qdat_svy so they ride into MI imputations ----
 # These outcomes/redefinitions depend only on biomarkers + age (not imputed), so they can be computed once.

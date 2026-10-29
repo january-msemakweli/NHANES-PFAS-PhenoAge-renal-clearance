@@ -5,14 +5,14 @@ library(grid)
 main_labels <- c(
   "Downloaded NHANES Participants\n(Selected Cycles)\n(N = 70,190)",
   "Age >= 20\n(N = 39,749)",
-  "Non-missing Required\nBiomarkers for PhenoAge Modeling\n(N = 23,387)",
-  "Non-missing Selected Weight,\nPrimary Sampling Unit, and Strata \n(N = 15,239)",
-  "Study Sample\n(Had PFAS measurements recorded)\n(N = 7,633)"
+  "Non-missing Required\nBiomarkers for PhenoAge Modeling\n(N = 23,386)",
+  "Non-missing Selected Weight,\nPrimary Sampling Unit, and Strata \n(N = 15,238)",
+  "Study Sample\n(Had PFAS measurements recorded)\n(N = 7,632)"
 )
 
 exclusion_labels <- c(
   "Excluded: Age < 20\n(N = 30,441)",
-  "Excluded: Missing Required Biomarkers\nfor PhenoAge Modeling\n(N = 16,362)",
+  "Excluded: Missing Required Biomarkers\nfor PhenoAge Modeling\n(N = 16,363)",
   "Excluded: Missing Weight/Primary Sampling Unit\n/Strata\n(N = 8,148)",
   "Excluded:\nPFAS measurements not recorded\n(N = 7,606)"
 )

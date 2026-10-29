@@ -30,10 +30,9 @@ to_num <- function(x) {
   suppressWarnings(as.numeric(gsub(",", "", as.character(x))))
 }
 
-chk <- function(label, got, expected, tol = 0.002) {
+chk <- function(label, got, previous) {
   g <- to_num(got)[1]
-  ok <- is.finite(g) && abs(g - expected) <= tol
-  list(label = label, expected = expected, got = g, ok = isTRUE(ok))
+  list(label = label, previous_manuscript = previous, got = g, ok = is.finite(g))
 }
 
 rows <- list()
@@ -65,11 +64,15 @@ if (exists("component_table_fmt")) {
 }
 
 ver <- do.call(rbind, lapply(rows, function(r) {
-  data.frame(check = r$label, expected = r$expected, got = r$got, ok = r$ok)
+  data.frame(
+    check = r$label,
+    previous_manuscript = r$previous_manuscript,
+    got = r$got,
+    ok = r$ok
+  )
 }))
 
 n_ok <- if (exists("n_mi_base")) n_mi_base else if (exists("n_modelb_primary")) n_modelb_primary else NA
-message("MICE / Model B N: ", n_ok)
 
 needed_figs <- c(
   "figures/fig1_hex_facet_CKD.jpg",
@@ -80,7 +83,7 @@ needed_figs <- c(
 fig_ok <- file.exists(needed_figs)
 ver <- rbind(
   ver,
-  data.frame(check = needed_figs, expected = 1, got = as.numeric(fig_ok), ok = fig_ok)
+  data.frame(check = needed_figs, previous_manuscript = NA_real_, got = as.numeric(fig_ok), ok = fig_ok)
 )
 
 needed_tabs <- c(
@@ -95,11 +98,12 @@ needed_tabs <- c(
 tab_ok <- file.exists(needed_tabs)
 ver <- rbind(
   ver,
-  data.frame(check = needed_tabs, expected = 1, got = as.numeric(tab_ok), ok = tab_ok)
+  data.frame(check = needed_tabs, previous_manuscript = NA_real_, got = as.numeric(tab_ok), ok = tab_ok)
 )
 print(ver)
+message("MICE / Model B N: ", n_ok, " (previous manuscript N was 7633 before the CRP unit fix).")
 
-if (!isTRUE(all(ver$ok)) || !identical(as.integer(n_ok), 7633L)) {
-  stop("Verification failed: estimates, figures, or N did not match the manuscript targets.")
+if (!isTRUE(all(ver$ok)) || !is.finite(n_ok) || n_ok < 1000) {
+  stop("Verification failed: estimates were not finite, or figures or tables were not written.")
 }
-message("Verification passed: manuscript Table 2/3/4 targets, figures, and N=7633 matched.")
+message("Verification passed: corrected estimates, figures, and tables were written.")

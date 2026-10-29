@@ -50,7 +50,7 @@ run_all.R
 - PhenoAge from Levine et al. (2018); acceleration is the survey-weighted residual of PhenoAge on chronological age
 - CKD: 2021 CKD-EPI eGFR < 60 and/or ACR >= 30
 - Adjustment: chronological age, sex, race/ethnicity, PIR, BMI, smoking, alcohol, survey cycle
-- MICE m = 24, seed 20260227; primary N = 7,633
+- MICE m = 24, seed 20260227; primary N = 7,632
 
 ## Outputs
 
